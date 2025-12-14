@@ -1,6 +1,6 @@
 {
   "name": "opencode-personal-knowledge",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Personal knowledge MCP server with vector database for the Opencode ecosystem",
   "type": "module",
   "main": "dist/mcp-server.js",
@@ -56,6 +56,12 @@
   },
   "trustedDependencies": [
     "@biomejs/biome",
-    "protobufjs"
-  ]
+    "protobufjs",
+    "sharp"
+  ],
+  "bun": {
+    "install": {
+      "optional": true
+    }
+  }
 }
