@@ -56,12 +56,6 @@
   },
   "trustedDependencies": [
     "@biomejs/biome",
-    "protobufjs",
-    "sharp"
-  ],
-  "bun": {
-    "install": {
-      "optional": true
-    }
-  }
+    "protobufjs"
+  ]
 }
