@@ -111,13 +111,13 @@ export OPENCODE_PK_DATA_DIR=/custom/path
 
 ### Embedding Model
 
-Uses `Xenova/all-MiniLM-L6-v2` (~22MB, auto-downloads on first use).
+Uses `BGE-small-en-v1.5` via [FastEmbed](https://github.com/Anush008/fastembed-js) (auto-downloads on first use).
 
 ## 🏗️ Technology Stack
 
 - **Runtime:** [Bun](https://bun.sh) / Node.js
 - **Vector DB:** [LanceDB](https://lancedb.com) (embedded)
-- **Embeddings:** [Transformers.js](https://huggingface.co/docs/transformers.js)
+- **Embeddings:** [FastEmbed](https://github.com/Anush008/fastembed-js) (ONNX Runtime)
 - **MCP SDK:** [@modelcontextprotocol/sdk](https://modelcontextprotocol.io)
 - **Database:** SQLite (via Bun)
 
