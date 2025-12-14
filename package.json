@@ -1,0 +1,59 @@
+{
+  "name": "opencode-personal-knowledge",
+  "version": "1.0.0",
+  "description": "Personal knowledge MCP server with vector database for the Opencode ecosystem",
+  "type": "module",
+  "main": "dist/mcp-server.js",
+  "bin": {
+    "opencode-personal-knowledge": "dist/mcp-server.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dev": "bun --watch run src/index.ts",
+    "mcp": "bun run src/mcp-server.ts",
+    "build": "bun build src/mcp-server.ts --outdir=dist --target=node --format=esm && bun build src/index.ts --outdir=dist --target=node --format=esm",
+    "prepublishOnly": "npm run build",
+    "test": "bun test",
+    "test:coverage": "bun test --coverage",
+    "lint": "bunx @biomejs/biome check src/",
+    "format": "bunx @biomejs/biome format --write src/"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "knowledge",
+    "vector",
+    "opencode",
+    "ai",
+    "embeddings",
+    "semantic-search"
+  ],
+  "author": "NocturnLabs - Yum (CodingInCarhartts)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NocturnLabs/opencode-personal-knowledge"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@lancedb/lancedb": "^0.22.3",
+    "@modelcontextprotocol/sdk": "^1.24.3",
+    "@xenova/transformers": "^2.17.2",
+    "commander": "^14.0.2",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/bun": "^1.1.14"
+  },
+  "trustedDependencies": [
+    "@biomejs/biome",
+    "protobufjs"
+  ]
+}
