@@ -1,11 +1,11 @@
 /**
  * Vector Database Service
  * 
- * Provides semantic search over knowledge entries using LanceDB and Transformers.js embeddings.
- * Uses all-MiniLM-L6-v2 model which auto-downloads on first use (~22MB).
+ * Provides semantic search over knowledge entries using LanceDB and FastEmbed.
+ * Uses Flag Embedding model which auto-downloads on first use.
  */
 import lancedb from "@lancedb/lancedb";
-import { pipeline, type FeatureExtractionPipeline } from "@xenova/transformers";
+import { EmbeddingModel, FlagEmbedding } from "fastembed";
 import { join } from "path";
 import { existsSync, mkdirSync } from "fs";
 import { homedir } from "os";
@@ -15,31 +15,35 @@ import { getAllEntries, type KnowledgeEntry } from "../database/index.js";
 const DATA_DIR = process.env.OPENCODE_PK_DATA_DIR || join(homedir(), ".local", "share", "opencode-personal-knowledge");
 const VECTOR_DB_PATH = join(DATA_DIR, "vectors");
 
-// Embedding model (auto-downloads on first use)
-const EMBEDDING_MODEL = "Xenova/all-MiniLM-L6-v2";
-
-// Singleton embedding pipeline
-let embeddingPipeline: FeatureExtractionPipeline | null = null;
+// Singleton embedding model
+let embeddingModel: FlagEmbedding | null = null;
 
 /**
- * Get or initialize the embedding pipeline.
+ * Get or initialize the embedding model.
  */
-async function getEmbeddingPipeline(): Promise<FeatureExtractionPipeline> {
-  if (!embeddingPipeline) {
-    console.error("Loading embedding model (first run may download ~22MB)...");
-    embeddingPipeline = await pipeline("feature-extraction", EMBEDDING_MODEL);
+async function getEmbeddingModel(): Promise<FlagEmbedding> {
+  if (!embeddingModel) {
+    console.error("Loading embedding model (first run may download model files)...");
+    embeddingModel = await FlagEmbedding.init({ model: EmbeddingModel.BGESmallENV15 });
     console.error("Embedding model loaded.");
   }
-  return embeddingPipeline;
+  return embeddingModel;
 }
 
 /**
  * Generate embedding for text.
  */
 export async function embed(text: string): Promise<number[]> {
-  const extractor = await getEmbeddingPipeline();
-  const output = await extractor(text, { pooling: "mean", normalize: true });
-  return Array.from(output.data as Float32Array);
+  const model = await getEmbeddingModel();
+  const embeddings = await model.embed([text]);
+  // Get the first (and only) embedding from the async iterator
+  for await (const batch of embeddings) {
+    // batch is number[][] (batch of embeddings), we want the first one
+    if (batch.length > 0) {
+      return Array.from(batch[0]);
+    }
+  }
+  return [];
 }
 
 /**
