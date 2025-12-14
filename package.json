@@ -1,6 +1,6 @@
 {
   "name": "opencode-personal-knowledge",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Personal knowledge MCP server with vector database for the Opencode ecosystem",
   "type": "module",
   "main": "dist/mcp-server.js",

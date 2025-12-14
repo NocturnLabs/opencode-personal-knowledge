@@ -128,5 +128,5 @@ MIT © [NocturnLabs](https://github.com/NocturnLabs)
 ---
 
 <p align="center">
-  Made with ❤️ for the <a href="https://opencode.ai">Opencode</a> ecosystem
+  Made with 🖤 for the <a href="https://opencode.ai">Opencode</a> ecosystem
 </p>
