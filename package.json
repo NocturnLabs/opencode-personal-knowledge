@@ -1,6 +1,6 @@
 {
   "name": "opencode-personal-knowledge",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Personal knowledge MCP server with vector database for the Opencode ecosystem",
   "type": "module",
   "main": "dist/mcp-server.js",
@@ -15,7 +15,7 @@
     "start": "bun run src/index.ts",
     "dev": "bun --watch run src/index.ts",
     "mcp": "bun run src/mcp-server.ts",
-    "build": "bun build src/mcp-server.ts --outdir=dist --target=node --format=esm && bun build src/index.ts --outdir=dist --target=node --format=esm",
+    "build": "tsc && chmod +x dist/mcp-server.js",
     "prepublishOnly": "npm run build",
     "test": "bun test",
     "test:coverage": "bun test --coverage",
@@ -50,7 +50,9 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
-    "@types/bun": "^1.1.14"
+    "@types/bun": "^1.1.14",
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
   },
   "trustedDependencies": [
     "@biomejs/biome",

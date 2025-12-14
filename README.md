@@ -34,7 +34,7 @@ Add to `~/.config/opencode/opencode.jsonc`:
   "mcp": {
     "personal-knowledge": {
       "type": "local",
-      "command": ["npx", "-y", "opencode-personal-knowledge"],
+      "command": ["bunx", "opencode-personal-knowledge"],
       "enabled": true
     }
   }
