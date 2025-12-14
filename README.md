@@ -16,7 +16,7 @@ Store and retrieve knowledge using semantic search, powered by local embeddings.
 
 ## ✨ Features
 
-- **🔍 Semantic Search** — Find knowledge using vector embeddings (all-MiniLM-L6-v2)
+- **🔍 Semantic Search** — Find knowledge using vector embeddings (BGE-small-en-v1.5)
 - **📝 Text Search** — Keyword-based search fallback
 - **🏷️ Tag Organization** — Categorize entries with tags
 - **🔌 Plug-and-Play** — No external services required (embeddings run 100% locally)
