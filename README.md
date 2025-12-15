@@ -54,6 +54,8 @@ bun run mcp  # Start MCP server
 
 ## 🛠️ MCP Tools
 
+### Knowledge Tools
+
 | Tool                    | Description                                    |
 | :---------------------- | :--------------------------------------------- |
 | `store_knowledge`       | Store a new knowledge entry with optional tags |
@@ -64,6 +66,20 @@ bun run mcp  # Start MCP server
 | `delete_knowledge`      | Delete an entry                                |
 | `list_knowledge`        | List entries with filters                      |
 | `get_knowledge_stats`   | Database statistics                            |
+
+### Session Memory Tools
+
+Log and search across entire OpenCode sessions.
+
+| Tool                    | Description                                    |
+| :---------------------- | :--------------------------------------------- |
+| `start_logging_session` | Begin logging a session                        |
+| `log_message`           | Log a user/agent message to the session        |
+| `search_session`        | Semantic search within a session               |
+| `search_all_sessions`   | Search across ALL logged sessions              |
+| `list_sessions`         | List all sessions                              |
+| `get_session`           | Get session details and messages               |
+| `end_session`           | End session with optional summary              |
 
 ## 📖 Example Usage
 
@@ -89,6 +105,30 @@ Found 1 similar entry:
 
 ### 1. Opencode Features (85% similar)
 Opencode is an open source AI coding agent...
+```
+
+### Session Memory
+
+**User:** "Start logging this session, call it 'auth debugging'"
+
+**Agent:** Starts session and logs all exchanges:
+
+```
+✅ Started session #1: "auth debugging"
+```
+
+**User:** "Search this session for JWT"
+
+**Agent:** Returns semantic matches from the session:
+
+```
+Found 2 matches in session #1:
+
+### 1. [user] (92% match)
+The JWT token expires too fast...
+
+### 2. [agent] (88% match)
+The TTL is set to 60 instead of 3600...
 ```
 
 ## ⚙️ Configuration
