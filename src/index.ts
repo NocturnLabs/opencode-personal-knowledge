@@ -22,7 +22,7 @@ const program = new Command();
 program
   .name("pk")
   .description("Personal Knowledge CLI - Manage your knowledge base")
-  .version("1.0.1");
+  .version("1.0.2");
 
 // Add command
 program
