@@ -22,7 +22,7 @@ const program = new Command();
 program
   .name("pk")
   .description("Personal Knowledge CLI - Manage your knowledge base")
-  .version("1.0.0");
+  .version("1.0.1");
 
 // Add command
 program
@@ -48,7 +48,7 @@ program
   .option("-l, --limit <limit>", "Maximum results", "5")
   .action(async (query, options) => {
     const limit = parseInt(options.limit);
-    
+
     if (options.text) {
       const results = searchKnowledgeText(query, limit);
       if (results.length === 0) {
@@ -119,12 +119,12 @@ program
     if (options.content) updates.content = options.content;
     if (options.source) updates.source = options.source;
     if (options.tags) updates.tags = options.tags.split(",").map((t: string) => t.trim());
-    
+
     if (Object.keys(updates).length === 0) {
       console.log("No updates provided.");
       return;
     }
-    
+
     const result = await updateKnowledge(parseInt(id), updates);
     if (!result.success) {
       console.log(`No entry found with ID: ${id}`);
@@ -159,13 +159,13 @@ program
     const limit = parseInt(options.limit);
     const offset = parseInt(options.offset);
     const tags = options.tags ? options.tags.split(",").map((t: string) => t.trim()) : undefined;
-    
+
     const entries = listKnowledge({ limit, offset, tags });
     if (entries.length === 0) {
       console.log("No entries found.");
       return;
     }
-    
+
     console.log(`📚 Knowledge Entries (${entries.length}):\n`);
     for (const e of entries) {
       console.log(`[${e.id}] ${e.title}${e.tags ? ` [${e.tags.join(", ")}]` : ""}`);
@@ -178,13 +178,13 @@ program
   .description("Get knowledge base statistics")
   .action(async () => {
     const stats = await getKnowledgeStats();
-    
+
     console.log("📊 Knowledge Base Stats\n");
     console.log(`Total Entries: ${stats.database.totalEntries}`);
     console.log(`Vectors Indexed: ${stats.vectors.totalVectors}`);
     console.log(`Oldest: ${stats.database.oldestEntry || "N/A"}`);
     console.log(`Newest: ${stats.database.newestEntry || "N/A"}`);
-    
+
     const tags = Object.entries(stats.database.tagCounts).sort((a, b) => b[1] - a[1]);
     if (tags.length > 0) {
       console.log("\nTop Tags:");
@@ -217,7 +217,7 @@ vectors
     const stats = await getVectorStats();
     console.log("📊 Vector Database Stats\n");
     console.log(`Total Vectors: ${stats.totalVectors}`);
-    
+
     const tags = Object.entries(stats.tagCounts).sort((a, b) => b[1] - a[1]);
     if (tags.length > 0) {
       console.log("\nTags in vectors:");
