@@ -13,6 +13,7 @@
  * - delete_knowledge: Delete an entry
  * - list_knowledge: List entries with filters
  * - get_knowledge_stats: Get database statistics
+ * - optimize_vector_store: Compact fragments and prune old dataset versions
  *
  * Session Memory Tools:
  * - start_logging_session: Begin logging a session
@@ -49,6 +50,7 @@ import {
   closeTimedOutSessions,
   getSessionStats,
 } from "./services/sessionService.js";
+import { optimizeVectorDB } from "./services/vectorService.js";
 
 // Create MCP server
 const server = new McpServer({
@@ -551,6 +553,29 @@ server.tool(
         text: `✅ Ended session with ${result.messageCount} messages${summary ? `\n📝 Summary: "${summary}"` : ""}`,
       }],
     };
+  }
+);
+
+// Tool: Optimize vector store
+server.tool(
+  "optimize_vector_store",
+  "Compact vector-store fragments and prune old dataset versions. Reclaims disk space (every write commits a new version); live rows are preserved. Maintenance also runs automatically in the background.",
+  {},
+  async () => {
+    try {
+      const stats = await optimizeVectorDB();
+      return {
+        content: [{
+          type: "text",
+          text: `✅ Removed ${stats.oldVersionsRemoved} old versions, reclaimed ${(stats.bytesRemoved / 1024 / 1024).toFixed(1)} MiB (fragments: ${stats.fragmentsRemoved} removed, ${stats.fragmentsAdded} added)`,
+        }],
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      return {
+        content: [{ type: "text", text: `❌ Optimize failed: ${message}` }],
+      };
+    }
   }
 );
 
