@@ -15,7 +15,7 @@ import {
   listKnowledge,
   getKnowledgeStats,
 } from "./services/knowledgeService.js";
-import { convertToVectorDB, getVectorStats, clearVectorDB } from "./services/vectorService.js";
+import { convertToVectorDB, getVectorStats, clearVectorDB, optimizeVectorDB } from "./services/vectorService.js";
 
 const program = new Command();
 
@@ -233,6 +233,16 @@ vectors
   .action(async () => {
     await clearVectorDB();
     console.log("✅ Vector database cleared");
+  });
+
+vectors
+  .command("optimize")
+  .description("Compact fragments and prune old dataset versions (reclaims disk, preserves live rows)")
+  .action(async () => {
+    console.log("Optimizing vector database...");
+    const stats = await optimizeVectorDB();
+    console.log(`✅ Removed ${stats.oldVersionsRemoved} old versions, reclaimed ${(stats.bytesRemoved / 1024 / 1024).toFixed(1)} MiB`);
+    console.log(`   Fragments: ${stats.fragmentsRemoved} removed, ${stats.fragmentsAdded} added`);
   });
 
 program.parse();

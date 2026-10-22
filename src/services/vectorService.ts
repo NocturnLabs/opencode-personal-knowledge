@@ -7,13 +7,49 @@
 import lancedb from "@lancedb/lancedb";
 import { EmbeddingModel, FlagEmbedding } from "fastembed";
 import { join } from "path";
-import { existsSync, mkdirSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { homedir } from "os";
 import { getAllEntries, type KnowledgeEntry } from "../database/index.js";
 
 // Use persistent user data directory (XDG-compliant on Linux)
 const DATA_DIR = process.env.OPENCODE_PK_DATA_DIR || join(homedir(), ".local", "share", "opencode-personal-knowledge");
 const VECTOR_DB_PATH = join(DATA_DIR, "vectors");
+
+// Throttled vector-store maintenance (see maybeOptimizeVectorDB).
+// Every LanceDB write commits a new dataset version; without periodic
+// cleanup _versions grows without bound (~1 GB/day under per-message
+// session logging). Optimize at most once per interval and only after a
+// minimum number of writes, in the background so tool calls stay fast.
+const MAINTENANCE_STATE_FILE = join(DATA_DIR, ".vector-maintenance.json");
+const OPTIMIZE_MIN_WRITES = 200;
+const OPTIMIZE_MIN_INTERVAL_MS = 24 * 60 * 60 * 1000;
+
+interface MaintenanceState {
+  lastOptimize: string | null;
+  writesSinceOptimize: number;
+}
+
+function readMaintenanceState(): MaintenanceState {
+  const fallback: MaintenanceState = { lastOptimize: null, writesSinceOptimize: 0 };
+  try {
+    if (!existsSync(MAINTENANCE_STATE_FILE)) return fallback;
+    const parsed = JSON.parse(readFileSync(MAINTENANCE_STATE_FILE, "utf-8"));
+    return {
+      lastOptimize: typeof parsed.lastOptimize === "string" ? parsed.lastOptimize : null,
+      writesSinceOptimize: typeof parsed.writesSinceOptimize === "number" ? parsed.writesSinceOptimize : 0,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+function writeMaintenanceState(state: MaintenanceState): void {
+  try {
+    writeFileSync(MAINTENANCE_STATE_FILE, JSON.stringify(state), "utf-8");
+  } catch {
+    // Maintenance bookkeeping must never break vector writes
+  }
+}
 
 // Singleton embedding model
 let embeddingModel: FlagEmbedding | null = null;
@@ -152,6 +188,7 @@ export async function convertToVectorDB(options: {
     await db.createTable("knowledge_vectors", vectorRecords);
   }
 
+  void maybeOptimizeVectorDB();
   return { converted: vectorRecords.length, skipped: existingIds.size };
 }
 
@@ -202,32 +239,34 @@ export async function queryVectors(
 export async function deleteVector(id: number): Promise<boolean> {
   const db = await getVectorDB();
   const tables = await db.tableNames();
-  
+
   if (!tables.includes("knowledge_vectors")) {
     return false;
   }
 
   const table = await db.openTable("knowledge_vectors");
   await table.delete(`id = ${id}`);
+  void maybeOptimizeVectorDB();
   return true;
 }
 
 /**
- * Update vector for a single entry.
+ * Update vector for a single entry (insert or replace via upsert).
+ *
+ * Uses a single merge-insert so each call commits exactly one dataset
+ * version. The previous delete-then-add committed two versions per call,
+ * including a wasted delete commit for brand-new ids (the log_message
+ * hot path), which made _versions grow without bound.
  */
 export async function updateVector(entry: KnowledgeEntry): Promise<boolean> {
   if (!entry.id) return false;
 
-  // Delete old vector
-  await deleteVector(entry.id);
-
-  // Create new vector
   const db = await getVectorDB();
   const tables = await db.tableNames();
-  
+
   const text = `${entry.title}\n${entry.content.slice(0, 1000)}`;
   const vector = await embed(text);
-  
+
   const record: VectorRecord = {
     id: entry.id,
     title: entry.title,
@@ -238,11 +277,15 @@ export async function updateVector(entry: KnowledgeEntry): Promise<boolean> {
 
   if (tables.includes("knowledge_vectors")) {
     const table = await db.openTable("knowledge_vectors");
-    await table.add([record]);
+    await table.mergeInsert("id")
+      .whenMatchedUpdateAll()
+      .whenNotMatchedInsertAll()
+      .execute([record]);
   } else {
     await db.createTable("knowledge_vectors", [record]);
   }
 
+  void maybeOptimizeVectorDB();
   return true;
 }
 
@@ -279,6 +322,74 @@ export async function getVectorStats(): Promise<{
     totalVectors: all.length,
     tagCounts,
   };
+}
+
+/**
+ * Compact data fragments and prune old dataset versions.
+ *
+ * Every LanceDB write commits a new version under _versions/; without
+ * this the vector store grows without bound. Safe to run any time:
+ * live rows are preserved, only superseded versions/fragments are removed.
+ */
+export async function optimizeVectorDB(): Promise<{
+  oldVersionsRemoved: number;
+  bytesRemoved: number;
+  fragmentsRemoved: number;
+  fragmentsAdded: number;
+}> {
+  const db = await getVectorDB();
+  const tables = await db.tableNames();
+
+  if (!tables.includes("knowledge_vectors")) {
+    return { oldVersionsRemoved: 0, bytesRemoved: 0, fragmentsRemoved: 0, fragmentsAdded: 0 };
+  }
+
+  const table = await db.openTable("knowledge_vectors");
+  const stats = await table.optimize({ cleanupOlderThan: new Date() });
+  writeMaintenanceState({ lastOptimize: new Date().toISOString(), writesSinceOptimize: 0 });
+
+  return {
+    oldVersionsRemoved: stats.prune.oldVersionsRemoved,
+    bytesRemoved: Number(stats.prune.bytesRemoved),
+    fragmentsRemoved: stats.compaction.fragmentsRemoved,
+    fragmentsAdded: stats.compaction.fragmentsAdded,
+  };
+}
+
+/**
+ * Pure maintenance-due decision, exported for tests.
+ */
+export function shouldOptimize(
+  nowMs: number,
+  state: { lastOptimize: string | null; writesSinceOptimize: number }
+): boolean {
+  if (state.writesSinceOptimize < OPTIMIZE_MIN_WRITES) return false;
+  if (state.lastOptimize === null) return true;
+  const lastMs = Date.parse(state.lastOptimize);
+  if (Number.isNaN(lastMs)) return true;
+  return nowMs - lastMs >= OPTIMIZE_MIN_INTERVAL_MS;
+}
+
+let optimizeInFlight = false;
+
+/**
+ * Record a vector write and run a background optimize when due.
+ * Never throws and never blocks the caller.
+ */
+export async function maybeOptimizeVectorDB(): Promise<void> {
+  const state = readMaintenanceState();
+  state.writesSinceOptimize += 1;
+  writeMaintenanceState(state);
+
+  if (optimizeInFlight || !shouldOptimize(Date.now(), state)) return;
+  optimizeInFlight = true;
+  try {
+    await optimizeVectorDB();
+  } catch (error) {
+    console.error("Vector store optimize failed:", error instanceof Error ? error.message : error);
+  } finally {
+    optimizeInFlight = false;
+  }
 }
 
 /**

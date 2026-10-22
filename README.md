@@ -66,6 +66,7 @@ bun run mcp  # Start MCP server
 | `delete_knowledge`      | Delete an entry                                |
 | `list_knowledge`        | List entries with filters                      |
 | `get_knowledge_stats`   | Database statistics                            |
+| `optimize_vector_store` | Compact fragments, prune old versions          |
 
 ### Session Memory Tools
 
