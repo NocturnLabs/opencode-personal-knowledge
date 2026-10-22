@@ -581,8 +581,12 @@ server.tool(
 
 // Start the server
 async function main() {
-  // Clean up any timed-out sessions on startup
-  closeTimedOutSessions();
+  // Clean up any timed-out sessions on startup; a failure here must not stop the server
+  try {
+    closeTimedOutSessions();
+  } catch (error) {
+    console.error("Startup session cleanup failed:", error);
+  }
 
   const transport = new StdioServerTransport();
   await server.connect(transport);

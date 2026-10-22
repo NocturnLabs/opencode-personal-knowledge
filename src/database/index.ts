@@ -84,6 +84,9 @@ export function initDatabase(): Database {
 
   ensureDataDir();
   db = new Database(DB_PATH, { create: true });
+  // Several server processes share this file; wait for locks instead of failing with SQLITE_BUSY.
+  db.run("PRAGMA busy_timeout = 5000");
+  db.run("PRAGMA journal_mode = WAL");
 
   db.run(`
     CREATE TABLE IF NOT EXISTS knowledge_entries (
